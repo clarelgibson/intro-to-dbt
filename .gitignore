@@ -225,3 +225,9 @@ __marimo__/
 # Local virtual environment 
 .venv/
 rsa_key*
+
+# dbt
+target/
+dbt_packages/
+logs/
+.env

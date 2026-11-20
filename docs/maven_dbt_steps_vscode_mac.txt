@@ -1,0 +1,239 @@
+==============================
+   DBT STEPS & CODE (VS CODE ON MAC, NO ANACONDA)
+==============================
+
+Written for macOS using the terminal inside VS Code (zsh).
+Key point: on a Mac, type python3 (not python) until the virtual
+environment is activated in step 2. After that, python works too.
+
+------------------------------
+   I. SETUP (ONE-OFF)
+------------------------------
+
+1. Check Python and VS Code
+
+   Open VS Code > Extensions (Cmd+Shift+X) > install "Python" by Microsoft.
+   Open a terminal in VS Code: Terminal > New Terminal (or Ctrl+`)
+
+   python3 --version
+
+   The course uses Python 3.11. Anything from 3.10 to 3.12 should be safe.
+   - If you see 3.9 or lower, or a pop-up asks to install "command line
+     developer tools", you are on the old Python built into macOS.
+     Install Python 3.11 from python.org, close and reopen the VS Code
+     terminal, then run python3 --version again.
+   - If you have 3.13 or newer and step 3 fails, install 3.11 from
+     python.org alongside it and use python3.11 in place of python3 in
+     step 2. (Unconfirmed whether dbt now supports the very latest Python.)
+
+   Also install the "code" command, used in section III step 3:
+   Cmd+Shift+P > type "Shell Command: Install 'code' command in PATH" > Enter.
+
+2. Create a course folder and a virtual environment
+   (this replaces "conda create" and "conda activate")
+
+   Create the folder in your home folder rather than on the Desktop.
+   If your Desktop syncs to iCloud, it would upload your private key and
+   thousands of installed package files.
+
+   mkdir ~/dbt_course
+
+   In VS Code: File > Open Folder > go to your home folder (Cmd+Shift+H
+   in the dialog) > select dbt_course > Open.
+   Open a new terminal (it will start inside dbt_course).
+
+   python3 -m venv .venv
+   source .venv/bin/activate
+
+   You should now see (.venv) at the start of the terminal prompt.
+
+   Point VS Code at it: Cmd+Shift+P > "Python: Select Interpreter" >
+   choose the one showing .venv. From now on, every new terminal you open
+   in this folder activates it automatically.
+
+3. Install dbt
+   (this replaces "conda install -c conda-forge dbt-snowflake")
+
+   python -m pip install --upgrade pip
+   python -m pip install dbt-snowflake
+   dbt --version
+
+   dbt-snowflake installs dbt-core automatically.
+
+4. Create an RSA key pair
+   (this replaces the openssl steps)
+
+   In VS Code, create a new file in dbt_course called gen_keys.py
+   (File > New File, or the new-file icon in the Explorer panel) and
+   paste in the following code:
+
+   ---------- start of gen_keys.py ----------
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+
+key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+with open("rsa_key.p8", "wb") as f:
+    f.write(key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ))
+
+public_pem = key.public_key().public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo,
+)
+with open("rsa_key.pub", "wb") as f:
+    f.write(public_pem)
+
+one_line = "".join(
+    line for line in public_pem.decode().splitlines() if "-----" not in line
+)
+print("Created rsa_key.p8 and rsa_key.pub")
+print("Public key for Snowflake (copy everything on the next line):")
+print(one_line)
+   ---------- end of gen_keys.py ----------
+
+   Save it (Cmd+S), then in the terminal:
+
+   python gen_keys.py
+
+   This produces the same two files as the course's openssl commands
+   (rsa_key.p8 = private key, rsa_key.pub = public key) in dbt_course.
+   The "cryptography" package it uses was installed with dbt-snowflake.
+   Keep the printed one-line public key handy for section III step 3.
+   (macOS also has openssl built in, so the course's two openssl
+   commands would work too. The script just saves a step.)
+
+   Never share rsa_key.p8 or put it inside a project you upload to GitHub.
+
+------------------------------
+   II. CHECKLIST
+------------------------------
+
+your snowflake link: https://cauxjfr-ibb03295.snowflakecomputing.com/console/login
+your snowflake account id: cauxjfr-ibb03295
+your snowflake username: doublew98
+your snowflake password: cyjkoc=4waQpu=wokken
+location of rsa_key.p8:   /Users/<you>/dbt_course/rsa_key.p8
+location of rsa_key.pub:  /Users/<you>/dbt_course/rsa_key.pub
+
+To get the exact path, right-click the file in VS Code's Explorer panel
+> Copy Path (or select it and press Option+Cmd+C).
+
+------------------------------
+   III. WORKFLOW
+------------------------------
+
+1. Activate dbt environment
+
+   Open VS Code > File > Open Folder > dbt_course
+   (or File > Open Recent).
+   Open a new terminal. Check (.venv) shows at the start of the prompt.
+   If not: source .venv/bin/activate
+
+2. Create new dbt project
+
+   Make sure the terminal is in dbt_course (no need to cd to Desktop).
+   Type pwd to check where you are.
+
+   dbt init maven_dbt_project
+   1                          <- snowflake
+   <your snowflake account id>
+   <your snowflake username>
+   2                          <- keypair
+   <FILE PATH>/rsa_key.p8     <- paste the path you copied
+   <type anything>            <- passphrase, blanked out in step 3
+   ACCOUNTADMIN
+   COMPUTE_WH
+   SNOWFLAKE_LEARNING_DB
+   PUBLIC
+   1
+
+   This creates a maven_dbt_project folder inside dbt_course.
+
+3. Test Snowflake connection
+
+   Open profiles.yml in VS Code (no need for Finder or hidden files):
+
+   code ~/.dbt/profiles.yml
+
+   If "code" is not found, use the Shell Command step in section I
+   step 1, or: File > Open, press Cmd+Shift+G, type ~/.dbt/profiles.yml,
+   press Enter.
+
+   Update the password value to '' and save (Cmd+S).
+   (The course calls it "password". If you see private_key_passphrase
+   instead, that is the line to blank out.)
+
+Test the connection in the terminal:
+
+   cd maven_dbt_project
+   dbt debug
+
+Update the public key in Snowflake:
+
+   - Click Create (+) at the top left > SQL File
+   - ALTER USER <your snowflake username> SET RSA_PUBLIC_KEY='<paste the one-line public key printed by gen_keys.py>';
+   - Click the Run button (triangle) at the top left
+
+   (If you use the contents of rsa_key.pub instead, leave out the
+   -----BEGIN PUBLIC KEY----- and -----END PUBLIC KEY----- lines.)
+
+Test the connection again in the terminal:
+
+   dbt debug
+
+   You want to see "All checks passed!"
+
+4. Explore dbt project structure
+
+   Do all of this in VS Code's Explorer panel (left-hand side). Right-click
+   to create or delete folders; drag files in from Finder.
+
+   - Keep the two files README.md and dbt_project.yml
+   - Delete all folders except for models and seeds
+   - In the dbt_project.yml file, delete all paths except for
+     models and seeds
+   - In the dbt_project.yml file, replace the term example with
+     staging and marts
+   - Paste the customers.csv, order_items.csv, orders.csv and
+     products.csv files into the seeds folder
+
+5. Build staging models
+
+   - Within the models folder, create a new folder called staging
+   - Paste in the staging files: stg_customers.sql,
+     stg_order_items.sql, stg_orders.sql, stg_products.sql
+
+6. Build marts models
+
+   - Within the models folder, create a new folder called marts
+   - Paste in the marts files: agg_sales_by_category.sql,
+     dim_customer.sql, dim_product.sql, fct_sales.sql
+
+7. Run dbt models
+
+   Make sure the terminal is inside maven_dbt_project.
+   (A new terminal starts in dbt_course, so: cd maven_dbt_project)
+
+   dbt seed
+   dbt run
+   dbt run --select dim_customer
+
+8. Add and run dbt tests
+
+   - Paste the schema.yml files into the staging and marts folders
+
+   dbt test
+
+9. Generate and view dbt docs
+
+   dbt docs generate
+   dbt docs serve
+
+   This opens the docs in your browser. Press Ctrl+C (Control, not
+   Command) in the terminal to stop it when you are finished.
+
+Congrats on completing your first dbt project!

@@ -1,0 +1,157 @@
+==============================
+   DBT STEPS & CODE
+==============================
+
+------------------------------
+   I. SETUP
+------------------------------
+
+1. Install Anaconda: https://www.anaconda.com/download
+
+2. Create a Snowflake account: https://signup.snowflake.com
+
+3. Install dbt
+
+   [Windows] Open the Anaconda Prompt app
+   [macOS] Open the Terminal app
+
+   conda --version
+   conda create -n dbt_env python=3.11
+   y
+   conda activate dbt_env
+   conda install -c conda-forge dbt-snowflake
+   y
+   dbt --version
+
+4. Create an RSA key pair
+
+   [Windows Only] conda install -c conda-forge openssl
+   [Windows Only] y
+   openssl genpkey -algorithm RSA -out rsa_key.p8 -pkeyopt rsa_keygen_bits:2048
+   openssl rsa -pubout -in rsa_key.p8 -out rsa_key.pub
+   
+   Use ls on macOS or dir on Windows to view the contents of a folder
+   Use pwd on macOS or cd on Windows to view the location of a folder
+
+------------------------------
+   II. CHECKLIST
+------------------------------
+
+your snowflake link: https://cauxjfr-ibb03295.snowflakecomputing.com/console/login
+your snowflake account id: cauxjfr-ibb03295
+your snowflake username: doublew98
+your snowflake password: cyjkoc=4waQpu=wokken
+location of rsa_key.p8: 
+location of rsa_key.pub: 
+
+------------------------------
+   III. WORKFLOW
+------------------------------
+
+1. Activate dbt environment
+
+   [Windows] Open the Anaconda Prompt app
+   [macOS] Open the Terminal app
+
+   conda activate dbt_env
+
+2. Create new dbt project
+
+   [Windows] cd %USERPROFILE%\Desktop
+   [macOS] cd ~/Desktop
+
+   dbt init maven_dbt_project
+   1
+   <your snowflake account id>
+   <your snowflake username>
+   2
+   <FILE PATH>/rsa_key.p8
+   <type anything>
+   ACCOUNTADMIN
+   COMPUTE_WH
+   SNOWFLAKE_LEARNING_DB
+   PUBLIC
+   1
+
+3. Test Snowflake connection
+
+   Navigate to the .dbt/profiles.yml file in your home directory:
+
+   [Windows]
+   - Open File Explorer and type %USERPROFILE% in the address bar,
+     then press Enter (this takes you to your home folder
+     C:\Users\your_username)
+   - Show hidden files: click the View tab in the ribbon, then check
+     Hidden items (Windows 10) or View > Show > Hidden items (Windows 11)
+   - Open the .dbt folder > double-click profiles.yml and choose to
+     open with Notepad
+
+   [macOS]
+   - Open Finder and press Command-Shift-H
+     (this takes you to your home folder, /Users/your_username)
+   - Show hidden files: press Command-Shift-. (period)
+     to toggle hidden files/folders visible
+   - Open the .dbt folder > double-click profiles.yml and choose to
+     open with TextEdit (or right-click > Open With > TextEdit if it
+     doesn't open automatically)
+
+   Update the password value to ''
+
+Test the connection in the command line:
+
+   [Windows] cd %USERPROFILE%\Desktop (dir to see files)
+   [macOS] cd ~/Desktop (ls to see files)
+   cd maven_dbt_project
+   dbt debug
+
+Update the public key in Snowflake:
+
+   - Click Create (+) at the top left > SQL File
+   - ALTER USER <your snowflake username> SET RSA_PUBLIC_KEY='<paste contents of rsa_key.pub file>';
+   - Click the Run button (triangle) at the top left
+
+Test the connection again in the command line:
+
+   dbt debug
+
+4. Explore dbt project structure
+
+   - Keep the two files README.md and dbt_project.yml
+   - Delete all folders except for models and seeds
+   - In the dbt_project.yml file, delete all paths except for
+     models and seeds
+   - In the dbt_project.yml file, replace the term example with
+     staging and marts
+   - Paste the customers.csv, order_items.csv, orders.csv and
+     products.csv files into the seeds folder
+
+5. Build staging models
+
+   - Within the models folder, create a new folder called staging
+   - Paste in the staging files: stg_customers.sql,
+    stg_order_items.sql, stg_orders.sql, stg_products.sql
+
+6. Build marts models
+
+   - Within the models folder, create a new folder called marts
+   - Paste in the marts files: agg_sales_by_category.sql,
+     dim_customer.sql, dim_product.sql, fct_sales.sql
+
+7. Run dbt models
+
+   dbt seed 
+   dbt run 
+   dbt run --select dim_customer
+
+8. Add and run dbt tests
+
+   - Paste the schema.yml files into the staging and marts folders
+
+   dbt test
+
+9. Generate and view dbt docs
+
+   dbt docs generate
+   dbt docs serve
+
+Congrats on completing your first dbt project!
